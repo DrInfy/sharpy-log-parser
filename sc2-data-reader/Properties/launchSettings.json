@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "sc2-data-reader": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Projects\\sc2-overmind\\games -y"
+    }
+  }
+}
