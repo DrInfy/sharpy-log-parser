@@ -74,7 +74,7 @@ namespace sc2DataReader
             var fileName = Path.GetFileNameWithoutExtension(file);
             gameStats.GameName = fileName;
 
-            var splits = fileName.Replace("random_learner", "randomlearner").Split('_');
+            var splits = fileName.Replace("random_learner", "randomlearner").Replace("_v2", "v2").Split('_');
 
             if (splits.Length < 3)
             {
@@ -100,8 +100,17 @@ namespace sc2DataReader
                 var ownUnits = false;
                 var enemyUnits = false;
 
-                foreach (var line in lines)
+                foreach (var fullLine in lines)
                 {
+                    var line = "";
+                    try
+                    {
+                        line = fullLine.Split("|", 2, StringSplitOptions.None)[1].Trim();
+                    }
+                    catch (Exception e)
+                    {
+                        continue;
+                    }
                     if (line.StartsWith("[EDGE]"))
                     {
                         var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);

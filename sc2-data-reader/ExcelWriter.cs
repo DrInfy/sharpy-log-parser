@@ -389,15 +389,15 @@ namespace sc2DataReader
         private static void ColorizeCell(ExcelRange cell, float winPercentage)
         {
             cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            if (winPercentage > 0.9)
+            if (winPercentage >= 0.9)
             {
                 cell.Style.Fill.BackgroundColor.SetColor(winColor);
             }
-            else if (winPercentage > 0.75)
+            else if (winPercentage >= 0.75)
             {
                 cell.Style.Fill.BackgroundColor.SetColor(minorWinColor);
             }
-            else if (winPercentage > 0.5)
+            else if (winPercentage >= 0.5)
             {
                 cell.Style.Fill.BackgroundColor.SetColor(drawColor);
             }
