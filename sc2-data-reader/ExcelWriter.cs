@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using OfficeOpenXml;
@@ -31,7 +32,7 @@ namespace sc2DataReader
 
         public void WriteTitle(ExcelRange cell)
         {
-            cell.Value = this.title;
+            cell.Value = this.title;   
         }
 
         public void WriteCell(ExcelRange cell, T1 data)
@@ -343,9 +344,9 @@ namespace sc2DataReader
                 new Column<WinLose>("Opponent", (_stats, cell) => cell.Value = _stats.Stats.FirstOrDefault()?.Opponent)
             );
 
-            foreach (var key in stats.ByBuildDict.Keys)
+            foreach (var key in stats.ByBuildDict.Keys.OrderBy(x => x))
             {
-                buildOpponentColumns.Add(new Column<WinLose>($"{key} %", (winLose, cell) =>
+                buildOpponentColumns.Add(new Column<WinLose>($"{key}", (winLose, cell) =>
                 {
                     var games = winLose.Stats.Where(x => x.Build == key).ToArray();
                     var wins = games.Count(x => x.Result == Result.Victory);

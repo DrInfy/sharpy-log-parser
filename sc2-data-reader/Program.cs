@@ -1,15 +1,33 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using RestSharp;
+using RestSharp.Authenticators;
 using sc2DataReader.GameData;
 
 namespace sc2DataReader
 {
+    class AiArenaBotList
+    {
+        public int count { get; set; }
+        public List<AiArenaBot> results { get; set; }
+    }
+    class AiArenaBot
+    {
+        public string name { get; set; }
+        public DateTime created { get; set; }
+        public string game_display_id { get; set; }
+    }
+
     class Program
     {
+        private static Dictionary<string, string> BotNameMap = new Dictionary<string, string>();
+
         private const bool dropUnknownGamesExcel = true;
+
         static void Main(string[] args)
         {
             if (args.Length == 0)
@@ -20,6 +38,34 @@ namespace sc2DataReader
             bool automaticallOopenFile = false;
             if (args.Contains("-y")) {
                 automaticallOopenFile = true;
+            }
+
+            if (args.Contains("-api"))
+            {
+                string token = null;
+
+                for (int i = 0; i < args.Length - 1; i++)
+                {
+                    if (args[i] == "-api")
+                    {
+                        token = args[i + 1];
+                    }
+                }
+                // https://aiarena.net/api/bots/?active=true
+                var client = new RestClient("https://aiarena.net/api/");
+                //client.Authenticator = new HttpBasicAuthenticator("DrInfy", "YHj9Te0OfSK5RKpUvtbQ");
+                client.AddDefaultHeader("Authorization", $"Token {token}");
+
+                var request = new RestRequest("bots/?active=true", DataFormat.Json);
+                var restResponse = client.Get<AiArenaBotList>(request);
+
+                if (restResponse.IsSuccessful)
+                {
+                    foreach (AiArenaBot bot in restResponse.Data.results)
+                    {
+                        BotNameMap[bot.game_display_id] = bot.name;
+                    }
+                }
             }
 
             var path = args[0];
@@ -74,7 +120,7 @@ namespace sc2DataReader
             var fileName = Path.GetFileNameWithoutExtension(file);
             gameStats.GameName = fileName;
 
-            var splits = fileName.Replace("random_learner", "randomlearner").Replace("_v2", "v2").Split('_');
+            var splits = fileName.Replace("random_learner", "randomlearner").Replace("_v2", "v2").Replace(" ", "_").Split('_');
 
             if (splits.Length < 3)
             {
@@ -85,8 +131,23 @@ namespace sc2DataReader
             gameStats.Map = splits[1];
             gameStats.Opponent = splits[0];
 
+            if (BotNameMap.TryGetValue(gameStats.Opponent, out var botName))
+            {
+                gameStats.Opponent = botName;
+            }
+
             // todo: change run_custom.py so that the timestamp is easier to parse
-            string timestampStr = $"{splits[2]}:{splits[3]}:{splits[4]}";
+            string timestampStr;
+            if (!splits[1].StartsWith("2"))
+            {
+                gameStats.Map = splits[1];
+                timestampStr = $"{splits[2]}:{splits[3]}:{splits[4]}";
+            }
+            else
+            {
+                gameStats.Map = "Unknown";
+                timestampStr = splits[1] + " " + string.Join(":", splits.Skip(2));
+            }
 
             var timestamp = DateTime.ParseExact(timestampStr, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
@@ -237,6 +298,22 @@ namespace sc2DataReader
                             }
 
                         }
+
+                        if (line.Contains("[Knowledge] Result: "))
+                        {
+                            if (line.Contains("Victory"))
+                            {
+                                gameStats.Result = Result.Victory;
+                            }
+                            else if (line.Contains("Defeat"))
+                            {
+                                gameStats.Result = Result.Defeat;
+                            }
+                            else if (line.Contains("Tie"))
+                            {
+                                gameStats.Result = Result.Draw;
+                            }
+                        }
                     }
                     else if (line.Contains("[Build]"))
                     {
@@ -259,8 +336,6 @@ namespace sc2DataReader
                                 }
                             }
                         }
-
-                        
                     }
 
                     if (line.Contains("rush distance"))
@@ -273,22 +348,6 @@ namespace sc2DataReader
                     if (line.Contains("[Surrender]"))
                     {
                         gameStats.Result = Result.Defeat;
-                    }
-                    else if (line.Contains("Result for player 1 - Bot"))
-                    {
-                        if (line.Contains("Victory"))
-                        {
-                            gameStats.Result = Result.Victory;
-                        }
-                        else if (line.Contains("Defeat"))
-                        {
-                            gameStats.Result = Result.Defeat;
-                        }
-                        else if (line.Contains("Tie"))
-                        {
-                            gameStats.Result = Result.Draw;
-                        }
-
                     }
                 }
 
