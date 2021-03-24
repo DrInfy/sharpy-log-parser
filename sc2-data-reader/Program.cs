@@ -53,7 +53,6 @@ namespace sc2DataReader
                 }
                 // https://aiarena.net/api/bots/?active=true
                 var client = new RestClient("https://aiarena.net/api/");
-                //client.Authenticator = new HttpBasicAuthenticator("DrInfy", "YHj9Te0OfSK5RKpUvtbQ");
                 client.AddDefaultHeader("Authorization", $"Token {token}");
 
                 var request = new RestRequest("bots/?active=true", DataFormat.Json);
