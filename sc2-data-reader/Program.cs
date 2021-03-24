@@ -141,7 +141,7 @@ namespace sc2DataReader
             if (!splits[1].StartsWith("2"))
             {
                 gameStats.Map = splits[1];
-                timestampStr = $"{splits[2]}:{splits[3]}:{splits[4]}";
+                timestampStr = $"{splits[2]} {splits[3]}:{splits[4]}:{splits[5]}";
             }
             else
             {
@@ -199,6 +199,12 @@ namespace sc2DataReader
                         if (line.Contains("[Chat] Sharpened Edge"))
                         {
                             gameStats.BotVersion = words.Last();
+                        }
+
+                        if (line.Contains("[MapInfo] Map"))
+                        {
+                            var index = line.IndexOf("[MapInfo] Map") + "[MapInfo] Map".Length + 1;
+                            gameStats.Map = line.Substring(index);
                         }
 
                         if (line.Contains("[Build]"))
@@ -261,6 +267,12 @@ namespace sc2DataReader
                             enemyUnits = false;
                         }
 
+                        if (line.Contains("FinalScore:"))
+                        {
+                            gameStats.FinalScore = float.Parse(words.Last(), NumberStyles.Float, CultureInfo.InvariantCulture);
+                        }
+                        
+
                         if (line.Contains("Enemy units:"))
                         {
                             ownUnits = false;
@@ -299,7 +311,7 @@ namespace sc2DataReader
 
                         }
 
-                        if (line.Contains("[Knowledge] Result: "))
+                        if (line.Contains("Result: "))
                         {
                             if (line.Contains("Victory"))
                             {
@@ -314,29 +326,38 @@ namespace sc2DataReader
                                 gameStats.Result = Result.Draw;
                             }
                         }
+                        else if (line.Contains("Episode:"))
+                        {
+                            var strings = line.Split('|');
+
+                            foreach (var split in strings)
+                            {
+                                var texts = split.Split(":");
+
+                                if (texts.Length == 2 && texts[0].Trim() == "Loss")
+                                {
+                                    if (float.TryParse(texts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
+                                    {
+                                        gameStats.Loss = result;
+                                    }
+                                }
+
+                                if (texts.Length == 2 && texts[0].Trim() == "Steps")
+                                {
+                                    if (float.TryParse(texts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
+                                    {
+                                        gameStats.Steps = result;
+                                    }
+                                }
+                            }
+                        }
                     }
                     else if (line.Contains("[Build]"))
                     {
                         var words = line.Split("[Build]");
                         gameStats.DummyBuild = words.Last().Trim();
                     }
-                    else if (line.StartsWith("Episode:"))
-                    {
-                        var strings = line.Split('|');
-
-                        foreach (var split in strings)
-                        {
-                            var texts = split.Split(":");
-
-                            if (texts.Length == 2 && texts[0].Trim() == "Loss")
-                            {
-                                if (float.TryParse(texts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
-                                {
-                                    gameStats.Loss = result;
-                                }
-                            }
-                        }
-                    }
+                    
 
                     if (line.Contains("rush distance"))
                     {

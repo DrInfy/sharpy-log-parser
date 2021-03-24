@@ -16,6 +16,16 @@ namespace sc2DataReader.GameData
 
         public float WinPercentage => (float) Wins / TotalGames;
 
+        public WinLose() {}
+
+        public WinLose(IEnumerable<GameStats> statses)
+        {
+            foreach (var gameStats in statses)
+            {
+                Add(gameStats);
+            }
+        }
+
         public void Add(GameStats result)
         {
             this.Stats.Add(result);

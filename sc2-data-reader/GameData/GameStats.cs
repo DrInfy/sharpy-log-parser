@@ -73,6 +73,8 @@ namespace sc2DataReader.GameData
         public float AverageMinerals { get; set; }
         public float AverageGas { get; set; }
         public float Loss { get; set; }
+        public float Steps { get; set; }
+        public float FinalScore { get; set; }
 
         public double Score
         {
@@ -104,6 +106,7 @@ namespace sc2DataReader.GameData
                 return points;
             }
         }
+
 
 
         public override string ToString()

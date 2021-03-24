@@ -135,11 +135,24 @@ namespace sc2DataReader
                 }),
                 new Column<GameStats>("Workers", (stats, cell) => cell.Value = stats.Workers),
                 new Column<GameStats>("E Workers", (stats, cell) => cell.Value = stats.EnemyWorkers),
-                new Column<GameStats>("Loss", (stats, cell) =>
+                new Column<GameStats>("ML Loss", (stats, cell) =>
                 {
                     cell.Value = stats.Loss;
                     cell.Style.Numberformat.Format = "# ### ### ##0.##";
                 }),
+                
+                new Column<GameStats>("FinalScore", (stats, cell) =>
+                {
+                    cell.Value = stats.FinalScore;
+                    cell.Style.Numberformat.Format = "# ### ### ##0.##";
+                }),
+
+                new Column<GameStats>("ML Steps", (stats, cell) =>
+                {
+                    cell.Value = stats.Steps;
+                    cell.Style.Numberformat.Format = "# ### ### ##0.##";
+                }),
+
                 new Column<GameStats>("Game name", (stats, cell) => cell.Value = stats.GameName),
                 new Column<GameStats>("Bot Version", (stats, cell) => cell.Value = stats.BotVersion),
             };
@@ -166,6 +179,18 @@ namespace sc2DataReader
                 new Column<WinLose>("Map", (stats, cell) =>
                 {
                     cell.Value = stats.Stats.FirstOrDefault()?.Map;
+                }),
+                new Column<WinLose>("Rush d", (stats, cell) =>
+                {
+                    var d = stats.Stats.FirstOrDefault(x => x.RushDistance != null)?.RushDistance;
+                    if (float.TryParse(d, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) || float.TryParse(d, out number))
+                    {
+                        cell.Value = number;
+                    }
+                    else
+                    {
+                        cell.Value = d;
+                    }
                 }),
                 new Column<WinLose>("Win percentage", (stats, cell) =>
                 {
@@ -255,23 +280,35 @@ namespace sc2DataReader
             ExcelWorksheet summaryWorksheet = package.Workbook.Worksheets.Add("Opponent summary");
             WriteOpponentSheet(stats, summaryWorksheet);
 
-            ExcelWorksheet mapSummaryWorksheet = package.Workbook.Worksheets.Add("Map summary");
-            WriteMapSheet(stats, mapSummaryWorksheet);
-
-            ExcelWorksheet opponentMapSummaryWorksheet = package.Workbook.Worksheets.Add("Opponent/map summary");
-            WriteOpponentMapSheet(stats, opponentMapSummaryWorksheet);
-
             ExcelWorksheet raceSummaryWorksheet = package.Workbook.Worksheets.Add("Race summary");
             WriteRaceSheet(stats, raceSummaryWorksheet);
 
             ExcelWorksheet buildSummaryWorksheet = package.Workbook.Worksheets.Add("Build summary");
             WriteBuildSheet(stats, buildSummaryWorksheet);
 
-            ExcelWorksheet buildOpponentWorksheet = package.Workbook.Worksheets.Add("Build + Opponent");
+            ExcelWorksheet buildRaceWorksheet = package.Workbook.Worksheets.Add("Build - Race");
+            WriteRaceBuildSheet(stats, buildRaceWorksheet);
+
+            ExcelWorksheet buildOpponentWorksheet = package.Workbook.Worksheets.Add("Build - Opponent");
             WriteOpponentBuildSheet(stats, buildOpponentWorksheet);
+
+            ExcelWorksheet mapSummaryWorksheet = package.Workbook.Worksheets.Add("Map summary");
+            WriteMapSheet(stats, mapSummaryWorksheet);
+
+            ExcelWorksheet mapRaceWorksheet = package.Workbook.Worksheets.Add("Map - Race");
+            WriteMapRaceSheet(stats, mapRaceWorksheet);
+
+            ExcelWorksheet mapBuildWorksheet = package.Workbook.Worksheets.Add("Map - Build");
+            WriteMapBuildSheet(stats, mapBuildWorksheet);
+
+            ExcelWorksheet opponentMapSummaryWorksheet = package.Workbook.Worksheets.Add("Opponent/map summary");
+            WriteOpponentMapSheet(stats, opponentMapSummaryWorksheet);
+
 
             Save(fullPath, package);
         }
+
+       
 
         private static void Save(string fullPath, ExcelPackage package)
         {
@@ -316,7 +353,72 @@ namespace sc2DataReader
         private static void WriteMapSheet(Stats stats, ExcelWorksheet worksheet)
         {
             var values = stats.MapDict.Values.OrderByDescending(map => map.WinPercentage);
-            var rowIndex = WriteSheet(values, worksheet, sheet3Columns);
+            WriteSheet(values, worksheet, sheet3Columns);
+        }
+
+        private static void WriteMapBuildSheet(Stats stats1, ExcelWorksheet worksheet)
+        {
+            var columns = new[]
+            {
+                new Column<WinLose>("Map", (stats, cell) =>
+                {
+                    cell.Value = stats.Stats.FirstOrDefault()?.Map;
+                }),
+                new Column<WinLose>("Build", (stats, cell) =>
+                {
+                    cell.Value = stats.Stats.FirstOrDefault()?.Build;
+                }),
+                new Column<WinLose>("Win percentage", (stats, cell) =>
+                {
+                    cell.Value = stats.WinPercentage;
+                    cell.Style.Numberformat.Format = "#0.00 %";
+
+                    ColorizeCell(cell, stats.WinPercentage);
+                }),
+                new Column<WinLose>("Games", (stats, cell) => cell.Value = stats.TotalGames),
+                new Column<WinLose>("Crashes", (stats, cell) => cell.Value = stats.Crashes),
+                new Column<WinLose>("Losses", (stats, cell) => cell.Value = stats.Losses),
+                new Column<WinLose>("Draws", (stats, cell) => cell.Value = stats.Draws),
+                new Column<WinLose>("Wins", (stats, cell) => cell.Value = stats.Wins),
+                new Column<WinLose>("Unknown", (stats, cell) => cell.Value = stats.Unknown),
+            };
+
+            var values = new List<WinLose>();
+            values = stats1.AllGames.OrderBy(x => x.Map).ThenBy(x => x.Build).GroupBy(x => x.Map + x.Build).Select(x => new WinLose(x)).ToList();
+            WriteSheet(values, worksheet, columns);
+        }
+
+        private static void WriteMapRaceSheet(Stats stats1, ExcelWorksheet worksheet)
+        {
+            var columns = new[]
+            {
+                new Column<WinLose>("Map", (stats, cell) =>
+                {
+                    cell.Value = stats.Stats.FirstOrDefault()?.Map;
+                }),
+                new Column<WinLose>("Race", (stats, cell) =>
+                {
+                    cell.Value = stats.Stats.FirstOrDefault()?.OpponentRace;
+                }),
+                new Column<WinLose>("Win percentage", (stats, cell) =>
+                {
+                    cell.Value = stats.WinPercentage;
+                    cell.Style.Numberformat.Format = "#0.00 %";
+
+                    ColorizeCell(cell, stats.WinPercentage);
+                }),
+                new Column<WinLose>("Games", (stats, cell) => cell.Value = stats.TotalGames),
+                new Column<WinLose>("Crashes", (stats, cell) => cell.Value = stats.Crashes),
+                new Column<WinLose>("Losses", (stats, cell) => cell.Value = stats.Losses),
+                new Column<WinLose>("Draws", (stats, cell) => cell.Value = stats.Draws),
+                new Column<WinLose>("Wins", (stats, cell) => cell.Value = stats.Wins),
+                new Column<WinLose>("Unknown", (stats, cell) => cell.Value = stats.Unknown),
+            };
+
+            var values = new List<WinLose>();
+            values = stats1.AllGames.OrderBy(x => x.Map).ThenBy(x => x.OpponentRace).GroupBy(x => x.Map + x.OpponentRace).Select(x =>  new WinLose(x)).ToList();
+
+            WriteSheet(values, worksheet, columns);
         }
 
         private static void WriteRaceSheet(Stats stats, ExcelWorksheet worksheet)
@@ -335,6 +437,56 @@ namespace sc2DataReader
         {
             var values = stats.AllGames.OrderBy(game => game.StartedOn);
             WriteSheet(values, worksheet, sheet1Columns);
+        }
+
+        private static void WriteRaceBuildSheet(Stats stats, ExcelWorksheet worksheet)
+        {
+            var buildRaceColumns = new List<Column<WinLose>>();
+            buildRaceColumns.Add(
+                new Column<WinLose>("Race", (_stats, cell) => cell.Value = _stats.Stats.FirstOrDefault()?.OpponentRace)
+            );
+
+            foreach (var key in stats.ByBuildDict.Keys.OrderBy(x => x))
+            {
+                buildRaceColumns.Add(new Column<WinLose>($"{key}", (winLose, cell) =>
+                {
+                    var games = winLose.Stats.Where(x => x.Build == key).ToArray();
+                    var wins = games.Count(x => x.Result == Result.Victory);
+                    if (games.Length == 0)
+                    {
+
+                    }
+                    else
+                    {
+                        var winRate = (float)wins / games.Length;
+                        cell.Value = winRate;
+                        cell.Style.Numberformat.Format = "#0.00 %";
+
+                        ColorizeCell(cell, winRate);
+                    }
+                }));
+
+                buildRaceColumns.Add(new Column<WinLose>($"Games", (winLose, cell) =>
+                {
+                    var games = winLose.Stats.Where(x => x.Build == key).ToArray();
+                    var wins = games.Count(x => x.Result == Result.Victory);
+                    if (games.Length == 0)
+                    {
+
+                    }
+                    else
+                    {
+                        var winRate = (float)wins / games.Length;
+                        cell.Value = $"{wins} - {games.Length - wins}";
+                        //cell.Style.Numberformat.Format = "#0.00 %";
+
+                        ColorizeCell(cell, winRate);
+                    }
+                }));
+            }
+            
+            var values = stats.ByMatchupDict.Values.OrderByDescending(build => build.WinPercentage);
+            WriteSheet(values, worksheet, buildRaceColumns.ToArray());
         }
 
         private static void WriteOpponentBuildSheet(Stats stats, ExcelWorksheet worksheet)
